@@ -1180,5 +1180,3 @@ end
 function ESPLibrary.SetSettings(newSettings)
     for k,v in pairs(newSettings) do Settings[k] = v end
 end
-
-return ESPLibrary

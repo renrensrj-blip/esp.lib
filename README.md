@@ -2,6 +2,8 @@
 
 A high-performance, fully customizable ESP (Extra Sensory Perception) library.
 
+MODULAR ESP easy to implement 
+MADE BY jairo
 ## Features
 - Box, Fill, Glow
 - Health & Armor bars
@@ -12,4 +14,4 @@ A high-performance, fully customizable ESP (Extra Sensory Perception) library.
 ## Usage
 ```lua
 local ESP = loadstring()
-ESP:Start()
+

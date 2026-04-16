@@ -68,11 +68,11 @@ end)
 local Esp = { Cache = {}, List = {}, Connections = {}, LocalRoot = nil }
 
 Esp.Settings = {
-    Enabled = false, LocalPlayer = true, Font = "Tahoma",
+    Enabled = false, LocalPlayer = false, Font = "Tahoma",
     FontSize = 12, FontType = "lowercase", MaxDistance = 9e9, RefreshRate = 60,
 
     Highlight = {
-        Enabled = true,
+        Enabled = false,
         FillColor = Rgb(216, 126, 157),
         OutlineColor = Rgb(0, 0, 0),
         FillTransparency = 0.5,
@@ -85,12 +85,12 @@ Esp.Settings = {
         Color = { Rgb(216, 126, 157), Rgb(216, 126, 157) },
         Transparency = { 0, 0 },
         Glow = {
-            Enabled = true, Rotation = 90,
+            Enabled = false, Rotation = 90,
             Color = { Rgb(216, 126, 157), Rgb(216, 126, 157) },
             Transparency = { 0.75, 0.75 },
         },
         Fill = {
-            Enabled = true, Rotation = 90,
+            Enabled = false, Rotation = 90,
             Color = { Rgb(216, 126, 157), Rgb(216, 126, 157) },
             Transparency = { 1, 0.5 },
         },
@@ -98,25 +98,25 @@ Esp.Settings = {
 
     Bars = {
         HealthBar = {
-            Enabled = true, Position = "Left",
+            Enabled = false, Position = "Left",
             Color = { Rgb(252, 71, 77), Rgb(255, 255, 0), Rgb(131, 245, 78) },
             Text = {
-                Enabled = true, FollowBar = false, Ending = "HP",
+                Enabled = false, FollowBar = false, Ending = "HP",
                 Position = "Left", Color = Rgb(255, 255, 255), Transparency = 0,
             },
         },
         ArmorBar = {
-            Enabled = true, Position = "Bottom",
+            Enabled = false, Position = "Bottom",
             Color = { Rgb(52, 131, 235), Rgb(52, 131, 235), Rgb(52, 131, 235) },
             Type = function() return 100, 100 end,
         },
     },
 
-    Name     = { Enabled = true,  UseDisplay = true, Position = "Top",    Color = Rgb(255,255,255), Transparency = 0 },
-    Distance = { Enabled = true,  Ending = "st",     Position = "Bottom", Color = Rgb(255,255,255), Transparency = 0 },
-    Weapon   = { Enabled = true,  ShowNone = true,   Position = "Bottom", Color = Rgb(255,255,255), Transparency = 0 },
+    Name     = { Enabled = false,  UseDisplay = true, Position = "Top",    Color = Rgb(255,255,255), Transparency = 0 },
+    Distance = { Enabled = false,  Ending = "st",     Position = "Bottom", Color = Rgb(255,255,255), Transparency = 0 },
+    Weapon   = { Enabled = false,  ShowNone = true,   Position = "Bottom", Color = Rgb(255,255,255), Transparency = 0 },
     Flags    = {
-        Enabled = true, Position = "Right", Color = Rgb(255,255,255), Transparency = 0,
+        Enabled = false, Position = "Right", Color = Rgb(255,255,255), Transparency = 0,
         Type = function(Speed, Jumping)
             if Jumping    then return { "jumping" }  end
             if Speed > 0  then return { "moving" }   end

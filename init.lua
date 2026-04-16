@@ -253,24 +253,19 @@ local function ProjectOrientedBoundingBox(Px, Py, Pz, R00, R01, R02, R10, R11, R
     local AxisAX, AxisAY, AxisAZ = R00 * HalfW, R01 * HalfW, R02 * HalfW;
     local AxisBX, AxisBY, AxisBZ = R10 * HalfH, R11 * HalfH, R12 * HalfH;
     local AxisCX, AxisCY, AxisCZ = R20 * HalfD, R21 * HalfD, R22 * HalfD;
-
     local DeltaX, DeltaY, DeltaZ = Px - CameraPositionX, Py - CameraPositionY, Pz - CameraPositionZ;
     local OriginDepth = CameraLookX * DeltaX + CameraLookY * DeltaY + CameraLookZ * DeltaZ;
     local OriginRight = CameraRightX * DeltaX + CameraRightY * DeltaY + CameraRightZ * DeltaZ;
     local OriginUp = CameraUpX * DeltaX + CameraUpY * DeltaY + CameraUpZ * DeltaZ;
-
     local DepthA = CameraLookX * AxisAX + CameraLookY * AxisAY + CameraLookZ * AxisAZ;
     local RightA = CameraRightX * AxisAX + CameraRightY * AxisAY + CameraRightZ * AxisAZ;
     local UpA = CameraUpX * AxisAX + CameraUpY * AxisAY + CameraUpZ * AxisAZ;
-
     local DepthB = CameraLookX * AxisBX + CameraLookY * AxisBY + CameraLookZ * AxisBZ;
     local RightB = CameraRightX * AxisBX + CameraRightY * AxisBY + CameraRightZ * AxisBZ;
     local UpB = CameraUpX * AxisBX + CameraUpY * AxisBY + CameraUpZ * AxisBZ;
-
     local DepthC = CameraLookX * AxisCX + CameraLookY * AxisCY + CameraLookZ * AxisCZ;
     local RightC = CameraRightX * AxisCX + CameraRightY * AxisCY + CameraRightZ * AxisCZ;
     local UpC = CameraUpX * AxisCX + CameraUpY * AxisCY + CameraUpZ * AxisCZ;
-
     ExpandScreenBounds(OriginDepth + DepthA + DepthB + DepthC, OriginRight + RightA + RightB + RightC, OriginUp + UpA + UpB + UpC);
     ExpandScreenBounds(OriginDepth + DepthA + DepthB - DepthC, OriginRight + RightA + RightB - RightC, OriginUp + UpA + UpB - UpC);
     ExpandScreenBounds(OriginDepth + DepthA - DepthB + DepthC, OriginRight + RightA - RightB + RightC, OriginUp + UpA - UpB + UpC);
@@ -281,13 +276,45 @@ local function ProjectOrientedBoundingBox(Px, Py, Pz, R00, R01, R02, R10, R11, R
     ExpandScreenBounds(OriginDepth - DepthA - DepthB - DepthC, OriginRight - RightA - RightB - RightC, OriginUp - UpA - UpB - UpC);
 end;
 
-local HideFieldNames = {
-    "OuterStroke", "BorderStroke", "InnerCover", "InnerStroke", "BoxFill",
-    "BarOutline", "BarBackground", "BarFill",
-    "ArmorOutline", "ArmorBackground", "ArmorFill",
-    "GlowTop", "GlowBot",
-    "LabelHealth", "LabelName", "LabelWeapon", "LabelDistance", "LabelFlags",
-};
+local function HideBoxFrames(Entry)
+    Entry.OuterStroke.Visible  = false;
+    Entry.BorderStroke.Visible = false;
+    Entry.InnerCover.Visible   = false;
+    Entry.InnerStroke.Visible  = false;
+end;
+
+local function HideFillFrame(Entry)
+    Entry.BoxFill.Visible = false;
+end;
+
+local function HideGlowFrames(Entry)
+    Entry.GlowTop.Visible = false;
+    Entry.GlowBot.Visible = false;
+end;
+
+local function HideHealthBar(Entry)
+    Entry.BarOutline.Visible    = false;
+    Entry.BarBackground.Visible = false;
+    Entry.BarFill.Visible       = false;
+    Entry.LabelHealth.Visible   = false;
+end;
+
+local function HideArmorBar(Entry)
+    Entry.ArmorOutline.Visible    = false;
+    Entry.ArmorBackground.Visible = false;
+    Entry.ArmorFill.Visible       = false;
+end;
+
+local function HideLabels(Entry)
+    Entry.LabelName.Visible     = false;
+    Entry.LabelWeapon.Visible   = false;
+    Entry.LabelDistance.Visible = false;
+    Entry.LabelFlags.Visible    = false;
+end;
+
+local function HideHighlight(Entry)
+    if Entry.Highlight then Entry.Highlight.Enabled = false end;
+end;
 
 local function ResetPositionCache(Entry)
     Entry.PrevBoxX = -1; Entry.PrevBoxY = -1; Entry.PrevBoxW = -1; Entry.PrevBoxH = -1;
@@ -305,6 +332,18 @@ local function ResetAllCache(Entry)
     Entry.PrevHealthString = ""; Entry.PrevNameString = "";
     Entry.PrevWeaponString = "__unset__";
     Entry.PrevDistanceString = ""; Entry.PrevFlagsString = "";
+end;
+
+local function EntryHide(Entry)
+    HideBoxFrames(Entry);
+    HideFillFrame(Entry);
+    HideGlowFrames(Entry);
+    HideHealthBar(Entry);
+    HideArmorBar(Entry);
+    HideLabels(Entry);
+    HideHighlight(Entry);
+    Entry.IsVisible = false;
+    ResetAllCache(Entry);
 end;
 
 local function EntryNew(Player)
@@ -362,15 +401,6 @@ local function EntryNew(Player)
     return Entry;
 end;
 
-local function EntryHide(Entry)
-    for Index = 1, #HideFieldNames do
-        Entry[HideFieldNames[Index]].Visible = false;
-    end;
-    Entry.IsVisible = false;
-    if Entry.Highlight then Entry.Highlight.Enabled = false end;
-    ResetAllCache(Entry);
-end;
-
 local function EntryDestroy(Entry)
     EntryHide(Entry);
     for _, Connection in ipairs(Entry.PlayerConnections) do pcall(Connection.Disconnect, Connection) end;
@@ -387,57 +417,36 @@ local function EntryBuildParts(Entry)
     local PaddingMap = Entry.IsR6 and R6PaddingMap or R15PaddingMap;
     local RootY = Entry.RootPart.Position.Y;
     local LowestY, HighestY = MathHuge, -MathHuge;
-
     local Parts, HalfWidths, HalfHeights, HalfDepths = {}, {}, {}, {};
     local Count = 0;
 
     for Index = 1, #PartNameList do
         local Part = Character:FindFirstChild(PartNameList[Index]);
         if not Part or not Part:IsA("BasePart") then continue end;
-
         local Padding = PaddingMap[PartNameList[Index]] or 0.04;
         local PartSize = Part.Size;
         local HalfW = PartSize.X * 0.5 + Padding;
         local HalfH = PartSize.Y * 0.5;
         local HalfD = PartSize.Z * 0.5 + Padding;
         local LocalY = Part.Position.Y - RootY;
-
         if LocalY + HalfH > HighestY then HighestY = LocalY + HalfH end;
         if LocalY - HalfH < LowestY then LowestY = LocalY - HalfH end;
-
         Count = Count + 1;
-        Parts[Count] = Part;
-        HalfWidths[Count] = HalfW;
-        HalfHeights[Count] = HalfH;
-        HalfDepths[Count] = HalfD;
+        Parts[Count] = Part; HalfWidths[Count] = HalfW; HalfHeights[Count] = HalfH; HalfDepths[Count] = HalfD;
     end;
 
     Entry.TopOffset = (HighestY == -MathHuge) and 3.0 or HighestY + 0.02;
     Entry.BotOffset = (LowestY == MathHuge) and 3.0 or -LowestY + 0.02;
-    Entry.Parts = Parts;
-    Entry.PartHalfW = HalfWidths;
-    Entry.PartHalfH = HalfHeights;
-    Entry.PartHalfD = HalfDepths;
-    Entry.PartCount = Count;
+    Entry.Parts = Parts; Entry.PartHalfW = HalfWidths; Entry.PartHalfH = HalfHeights; Entry.PartHalfD = HalfDepths; Entry.PartCount = Count;
 end;
 
 local function EntryClearCharacter(Entry)
     for _, Connection in ipairs(Entry.CharacterConnections) do pcall(Connection.Disconnect, Connection) end;
     Entry.CharacterConnections = {};
-    Entry.Character = nil;
-    Entry.RootPart = nil;
-    Entry.Humanoid = nil;
-    Entry.IsDead = false;
-    Entry.Parts = {};
-    Entry.PartHalfW = {};
-    Entry.PartHalfH = {};
-    Entry.PartHalfD = {};
-    Entry.PartCount = 0;
-    Entry.HealthString = "100";
-    Entry.WeaponString = "none";
-    Entry.FlagsString = "";
-    Entry.CachedMoveSpeed = 0;
-    Entry.CachedJumping = false;
+    Entry.Character = nil; Entry.RootPart = nil; Entry.Humanoid = nil; Entry.IsDead = false;
+    Entry.Parts = {}; Entry.PartHalfW = {}; Entry.PartHalfH = {}; Entry.PartHalfD = {}; Entry.PartCount = 0;
+    Entry.HealthString = "100"; Entry.WeaponString = "none"; Entry.FlagsString = "";
+    Entry.CachedMoveSpeed = 0; Entry.CachedJumping = false;
     if Entry.Highlight then pcall(Entry.Highlight.Destroy, Entry.Highlight); Entry.Highlight = nil end;
 end;
 
@@ -469,11 +478,8 @@ local function EntryLinkCharacter(Entry, Character)
     end;
 
     Entry.IsR6 = Character:FindFirstChild("Torso") ~= nil;
-    Entry.Character = Character;
-    Entry.RootPart = RootPart;
-    Entry.Humanoid = Humanoid;
-    Entry.IsDead = false;
-    Entry.MaxHealth = Humanoid.MaxHealth;
+    Entry.Character = Character; Entry.RootPart = RootPart; Entry.Humanoid = Humanoid;
+    Entry.IsDead = false; Entry.MaxHealth = Humanoid.MaxHealth;
     Entry.Health = MathClamp(Humanoid.Health / Humanoid.MaxHealth, 0, 1);
     Entry.HealthString = ToString(MathFloor(Humanoid.Health));
     Entry.CachedMoveSpeed = Humanoid.MoveDirection.Magnitude;
@@ -491,8 +497,7 @@ local function EntryLinkCharacter(Entry, Character)
     CharConnections[#CharConnections + 1] = Humanoid.HealthChanged:Connect(function(NewHealth)
         Entry.Health = MathClamp(NewHealth / Entry.MaxHealth, 0, 1);
         Entry.HealthString = ToString(MathFloor(NewHealth));
-        Entry.PrevFillHeight = -1;
-        Entry.PrevHealthString = "";
+        Entry.PrevFillHeight = -1; Entry.PrevHealthString = "";
     end);
 
     CharConnections[#CharConnections + 1] = Humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(function()
@@ -511,8 +516,7 @@ local function EntryLinkCharacter(Entry, Character)
     end);
 
     CharConnections[#CharConnections + 1] = Humanoid.Running:Connect(function(Speed)
-        Entry.CachedMoveSpeed = Speed;
-        RebuildFlagsString(Entry);
+        Entry.CachedMoveSpeed = Speed; RebuildFlagsString(Entry);
     end);
 
     CharConnections[#CharConnections + 1] = Character.ChildAdded:Connect(function(Child)
@@ -595,15 +599,12 @@ local function UpdateBoxFrame(Entry, BoxX, BoxY, BoxW, BoxH)
     Entry.OuterStroke.Visible = true;
     Entry.OuterStroke.Position = NewUDim2(0, BoxX - 1, 0, BoxY - 1);
     Entry.OuterStroke.Size = NewUDim2(0, BoxW + 2, 0, BoxH + 2);
-
     Entry.BorderStroke.Visible = true;
     Entry.BorderStroke.Position = NewUDim2(0, BoxX, 0, BoxY);
     Entry.BorderStroke.Size = NewUDim2(0, BoxW, 0, BoxH);
-
     Entry.InnerCover.Visible = true;
     Entry.InnerCover.Position = NewUDim2(0, BoxX + 1, 0, BoxY + 1);
     Entry.InnerCover.Size = NewUDim2(0, BoxW - 2, 0, BoxH - 2);
-
     Entry.InnerStroke.Visible = true;
     Entry.InnerStroke.Position = NewUDim2(0, BoxX + 1, 0, BoxY + 1);
     Entry.InnerStroke.Size = NewUDim2(0, BoxW - 2, 0, BoxH - 2);
@@ -620,52 +621,37 @@ local function UpdateGlowFrames(Entry, BoxX, BoxY, BoxW, BoxH)
     local GlowW, GlowH = BoxW + GlowPadding2, BoxH + GlowPadding2;
     local Position = NewUDim2(0, GlowX, 0, GlowY);
     local Size = NewUDim2(0, GlowW, 0, GlowH);
-
-    Entry.GlowTop.Visible = true;
-    Entry.GlowTop.Position = Position;
-    Entry.GlowTop.Size = Size;
-
-    Entry.GlowBot.Visible = true;
-    Entry.GlowBot.Position = Position;
-    Entry.GlowBot.Size = Size;
+    Entry.GlowTop.Visible = true; Entry.GlowTop.Position = Position; Entry.GlowTop.Size = Size;
+    Entry.GlowBot.Visible = true; Entry.GlowBot.Position = Position; Entry.GlowBot.Size = Size;
 end;
 
 local function ProjectLodFallback(DepthDistance, RightDistance, UpDistance, EntryTop, EntryBot, BoxHalfWidth)
     local InverseFocal;
-
     local TopDepth = DepthDistance + CameraLookY * EntryTop;
     if TopDepth > 0 then
         InverseFocal = FocalLength / TopDepth;
-        local ScreenLeft = HalfViewportX + (RightDistance - BoxHalfWidth) * InverseFocal;
-        local ScreenRight = HalfViewportX + (RightDistance + BoxHalfWidth) * InverseFocal;
-        local ScreenY = HalfViewportY - (UpDistance + EntryTop) * InverseFocal;
-        if ScreenLeft < ScreenMinX then ScreenMinX = ScreenLeft end;
-        if ScreenRight > ScreenMaxX then ScreenMaxX = ScreenRight end;
-        if ScreenY < ScreenMinY then ScreenMinY = ScreenY end;
-        if ScreenY > ScreenMaxY then ScreenMaxY = ScreenY end;
+        local SL = HalfViewportX + (RightDistance - BoxHalfWidth) * InverseFocal;
+        local SR = HalfViewportX + (RightDistance + BoxHalfWidth) * InverseFocal;
+        local SY = HalfViewportY - (UpDistance + EntryTop) * InverseFocal;
+        if SL < ScreenMinX then ScreenMinX = SL end; if SR > ScreenMaxX then ScreenMaxX = SR end;
+        if SY < ScreenMinY then ScreenMinY = SY end; if SY > ScreenMaxY then ScreenMaxY = SY end;
     end;
-
     local BottomDepth = DepthDistance - CameraLookY * EntryBot;
     if BottomDepth > 0 then
         InverseFocal = FocalLength / BottomDepth;
-        local ScreenLeft = HalfViewportX + (RightDistance - BoxHalfWidth) * InverseFocal;
-        local ScreenRight = HalfViewportX + (RightDistance + BoxHalfWidth) * InverseFocal;
-        local ScreenY = HalfViewportY - (UpDistance - EntryBot) * InverseFocal;
-        if ScreenLeft < ScreenMinX then ScreenMinX = ScreenLeft end;
-        if ScreenRight > ScreenMaxX then ScreenMaxX = ScreenRight end;
-        if ScreenY < ScreenMinY then ScreenMinY = ScreenY end;
-        if ScreenY > ScreenMaxY then ScreenMaxY = ScreenY end;
+        local SL = HalfViewportX + (RightDistance - BoxHalfWidth) * InverseFocal;
+        local SR = HalfViewportX + (RightDistance + BoxHalfWidth) * InverseFocal;
+        local SY = HalfViewportY - (UpDistance - EntryBot) * InverseFocal;
+        if SL < ScreenMinX then ScreenMinX = SL end; if SR > ScreenMaxX then ScreenMaxX = SR end;
+        if SY < ScreenMinY then ScreenMinY = SY end; if SY > ScreenMaxY then ScreenMaxY = SY end;
     end;
-
     if DepthDistance > 0 then
         InverseFocal = FocalLength / DepthDistance;
-        local ScreenLeft = HalfViewportX + (RightDistance - BoxHalfWidth) * InverseFocal;
-        local ScreenRight = HalfViewportX + (RightDistance + BoxHalfWidth) * InverseFocal;
-        local ScreenMid = HalfViewportY - UpDistance * InverseFocal;
-        if ScreenLeft < ScreenMinX then ScreenMinX = ScreenLeft end;
-        if ScreenRight > ScreenMaxX then ScreenMaxX = ScreenRight end;
-        if ScreenMid < ScreenMinY then ScreenMinY = ScreenMid end;
-        if ScreenMid > ScreenMaxY then ScreenMaxY = ScreenMid end;
+        local SL = HalfViewportX + (RightDistance - BoxHalfWidth) * InverseFocal;
+        local SR = HalfViewportX + (RightDistance + BoxHalfWidth) * InverseFocal;
+        local SM = HalfViewportY - UpDistance * InverseFocal;
+        if SL < ScreenMinX then ScreenMinX = SL end; if SR > ScreenMaxX then ScreenMaxX = SR end;
+        if SM < ScreenMinY then ScreenMinY = SM end; if SM > ScreenMaxY then ScreenMaxY = SM end;
     end;
 end;
 
@@ -693,27 +679,34 @@ Esp.Connections[#Esp.Connections + 1] = ServiceRunService.RenderStepped:Connect(
     local LocalX, LocalY, LocalZ = 0, 0, 0;
     local HasLocalPlayer = LocalPlayerRoot ~= nil;
     if HasLocalPlayer then
-        local LocalPosition = LocalPlayerRoot.Position;
-        LocalX = LocalPosition.X; LocalY = LocalPosition.Y; LocalZ = LocalPosition.Z;
+        local LP = LocalPlayerRoot.Position;
+        LocalX = LP.X; LocalY = LP.Y; LocalZ = LP.Z;
     end;
 
-    local BoxEnabled = Settings.Box.Enabled;
-    local FillEnabled = Settings.Box.Fill.Enabled;
-    local GlowEnabled = Settings.Box.Glow.Enabled;
-    local HealthBarEnabled = Settings.Bars.HealthBar.Enabled;
-    local HealthTextEnabled = Settings.Bars.HealthBar.Text.Enabled;
-    local ArmorBarEnabled = Settings.Bars.ArmorBar.Enabled;
-    local ArmorTypeFn = Settings.Bars.ArmorBar.Type;
-    local NameEnabled = Settings.Name.Enabled;
-    local WeaponEnabled = Settings.Weapon.Enabled;
-    local WeaponShowNone = Settings.Weapon.ShowNone;
-    local DistanceEnabled = Settings.Distance.Enabled;
-    local FlagsEnabled = Settings.Flags.Enabled;
+    local EspEnabled         = Settings.Enabled;
+    local BoxEnabled         = Settings.Box.Enabled;
+    local FillEnabled        = Settings.Box.Fill.Enabled;
+    local GlowEnabled        = Settings.Box.Glow.Enabled;
+    local HighlightEnabled   = Settings.Highlight.Enabled;
+    local HealthBarEnabled   = Settings.Bars.HealthBar.Enabled;
+    local HealthTextEnabled  = Settings.Bars.HealthBar.Text.Enabled;
+    local ArmorBarEnabled    = Settings.Bars.ArmorBar.Enabled;
+    local ArmorTypeFn        = Settings.Bars.ArmorBar.Type;
+    local NameEnabled        = Settings.Name.Enabled;
+    local WeaponEnabled      = Settings.Weapon.Enabled;
+    local WeaponShowNone     = Settings.Weapon.ShowNone;
+    local DistanceEnabled    = Settings.Distance.Enabled;
+    local FlagsEnabled       = Settings.Flags.Enabled;
 
     local List = Esp.List;
 
     for ListIndex = 1, #List do
         local Entry = List[ListIndex];
+
+        if not EspEnabled then
+            EntryHide(Entry);
+            continue;
+        end;
 
         if Entry.IsDead or not Entry.RootPart or not Entry.Character then
             EntryHide(Entry); continue;
@@ -731,11 +724,18 @@ Esp.Connections[#Esp.Connections + 1] = ServiceRunService.RenderStepped:Connect(
 
         local FrontDot = (RootX - CameraPositionX) * CameraLookX + (RootY - CameraPositionY) * CameraLookY + (RootZ - CameraPositionZ) * CameraLookZ;
         if FrontDot < 0 then EntryHide(Entry); continue end;
-        if Entry.Highlight and not Entry.Highlight.Enabled then Entry.Highlight.Enabled = true end;
+
+        if Entry.Highlight then
+            Entry.Highlight.Enabled = HighlightEnabled;
+        elseif HighlightEnabled and Entry.Character then
+            Entry.Highlight = CreateHighlight(Entry.Character);
+        end;
 
         ScreenMinX = MathHuge; ScreenMinY = MathHuge; ScreenMaxX = -MathHuge; ScreenMaxY = -MathHuge;
 
-        local CameraDeltaX, CameraDeltaY, CameraDeltaZ = RootX - CameraPositionX, RootY - CameraPositionY, RootZ - CameraPositionZ;
+        local CameraDeltaX = RootX - CameraPositionX;
+        local CameraDeltaY = RootY - CameraPositionY;
+        local CameraDeltaZ = RootZ - CameraPositionZ;
         local CameraDistSq = CameraDeltaX * CameraDeltaX + CameraDeltaY * CameraDeltaY + CameraDeltaZ * CameraDeltaZ;
 
         if Entry.PartCount == 0 or CameraDistSq > LodDistanceSquared then
@@ -752,8 +752,8 @@ Esp.Connections[#Esp.Connections + 1] = ServiceRunService.RenderStepped:Connect(
             for PartIndex = 1, Entry.PartCount do
                 local Part = EntryParts[PartIndex];
                 if not Part or not Part.Parent then continue end;
-                local CompX, CompY, CompZ, M00, M01, M02, M10, M11, M12, M20, M21, M22 = Part.CFrame:GetComponents();
-                ProjectOrientedBoundingBox(CompX, CompY, CompZ, M00, M01, M02, M10, M11, M12, M20, M21, M22, EntryHalfW[PartIndex], EntryHalfH[PartIndex], EntryHalfD[PartIndex]);
+                local CX, CY, CZ, M00, M01, M02, M10, M11, M12, M20, M21, M22 = Part.CFrame:GetComponents();
+                ProjectOrientedBoundingBox(CX, CY, CZ, M00, M01, M02, M10, M11, M12, M20, M21, M22, EntryHalfW[PartIndex], EntryHalfH[PartIndex], EntryHalfD[PartIndex]);
             end;
         end;
 
@@ -777,8 +777,20 @@ Esp.Connections[#Esp.Connections + 1] = ServiceRunService.RenderStepped:Connect(
 
             if BoxEnabled then
                 UpdateBoxFrame(Entry, BoxX, BoxY, BoxW, BoxH);
-                if FillEnabled then UpdateFillFrame(Entry, BoxX, BoxY, BoxW, BoxH) end;
-                if GlowEnabled then UpdateGlowFrames(Entry, BoxX, BoxY, BoxW, BoxH) end;
+            else
+                HideBoxFrames(Entry);
+            end;
+
+            if BoxEnabled and FillEnabled then
+                UpdateFillFrame(Entry, BoxX, BoxY, BoxW, BoxH);
+            else
+                HideFillFrame(Entry);
+            end;
+
+            if BoxEnabled and GlowEnabled then
+                UpdateGlowFrames(Entry, BoxX, BoxY, BoxW, BoxH);
+            else
+                HideGlowFrames(Entry);
             end;
 
             if HealthBarEnabled then
@@ -787,13 +799,14 @@ Esp.Connections[#Esp.Connections + 1] = ServiceRunService.RenderStepped:Connect(
                 local HealthBarH = BoxH + BarPadding2;
                 Entry.BarX = HealthBarX; Entry.BarY = HealthBarY; Entry.BarH = HealthBarH;
                 Entry.BarLabelX = HealthBarX - 14; Entry.BarLabelY = HealthBarY;
-
                 Entry.BarOutline.Visible = true;
                 Entry.BarOutline.Position = NewUDim2(0, HealthBarX - 1, 0, HealthBarY - 1);
                 Entry.BarOutline.Size = NewUDim2(0, BarWidthOutline, 0, HealthBarH + 2);
                 Entry.BarBackground.Visible = true;
                 Entry.BarBackground.Position = NewUDim2(0, HealthBarX, 0, HealthBarY);
                 Entry.BarBackground.Size = NewUDim2(0, BarWidth, 0, HealthBarH);
+            else
+                HideHealthBar(Entry);
             end;
 
             if ArmorBarEnabled then
@@ -801,19 +814,26 @@ Esp.Connections[#Esp.Connections + 1] = ServiceRunService.RenderStepped:Connect(
                 local ArmorY = BoxBottom + ArmorBarGap;
                 local ArmorW = BoxW + ArmorBarPadding * 2;
                 Entry.ArmorBarX = ArmorX; Entry.ArmorBarY = ArmorY; Entry.ArmorBarW = ArmorW;
-
                 Entry.ArmorOutline.Visible = true;
                 Entry.ArmorOutline.Position = NewUDim2(0, ArmorX - 1, 0, ArmorY - 1);
                 Entry.ArmorOutline.Size = NewUDim2(0, ArmorW + 2, 0, ArmorBarHeightOutline);
                 Entry.ArmorBackground.Visible = true;
                 Entry.ArmorBackground.Position = NewUDim2(0, ArmorX, 0, ArmorY);
                 Entry.ArmorBackground.Size = NewUDim2(0, ArmorW, 0, ArmorBarHeight);
+            else
+                HideArmorBar(Entry);
             end;
 
             if FlagsEnabled then
                 Entry.FlagsLabelX = BoxRight + BarGapWidth;
                 Entry.FlagsLabelY = BoxY;
             end;
+        else
+            if not BoxEnabled then HideBoxFrames(Entry) end;
+            if not BoxEnabled or not FillEnabled then HideFillFrame(Entry) end;
+            if not BoxEnabled or not GlowEnabled then HideGlowFrames(Entry) end;
+            if not HealthBarEnabled then HideHealthBar(Entry) end;
+            if not ArmorBarEnabled then HideArmorBar(Entry) end;
         end;
 
         if HealthBarEnabled then
@@ -827,13 +847,15 @@ Esp.Connections[#Esp.Connections + 1] = ServiceRunService.RenderStepped:Connect(
 
             if HealthTextEnabled then
                 local HealthStr = Entry.HealthString;
-                local HealthLabelX, HealthLabelY = Entry.BarLabelX, Entry.BarLabelY;
-                if HealthStr ~= Entry.PrevHealthString or HealthLabelX ~= Entry.PrevHealthLabelX or HealthLabelY ~= Entry.PrevHealthLabelY then
-                    Entry.PrevHealthString = HealthStr; Entry.PrevHealthLabelX = HealthLabelX; Entry.PrevHealthLabelY = HealthLabelY;
+                local HLX, HLY = Entry.BarLabelX, Entry.BarLabelY;
+                if HealthStr ~= Entry.PrevHealthString or HLX ~= Entry.PrevHealthLabelX or HLY ~= Entry.PrevHealthLabelY then
+                    Entry.PrevHealthString = HealthStr; Entry.PrevHealthLabelX = HLX; Entry.PrevHealthLabelY = HLY;
                     Entry.LabelHealth.Visible = true;
                     Entry.LabelHealth.Text = HealthStr;
-                    Entry.LabelHealth.Position = NewUDim2(0, HealthLabelX + 1, 0, HealthLabelY + HealthOffset);
+                    Entry.LabelHealth.Position = NewUDim2(0, HLX + 1, 0, HLY + HealthOffset);
                 end;
+            else
+                Entry.LabelHealth.Visible = false;
             end;
         end;
 
@@ -850,58 +872,66 @@ Esp.Connections[#Esp.Connections + 1] = ServiceRunService.RenderStepped:Connect(
         end;
 
         if NameEnabled then
-            local NameX, NameY = BoxCenterX, BoxY + NameOffset;
+            local NX, NY = BoxCenterX, BoxY + NameOffset;
             local NameStr = Entry.PlayerName;
-            if NameStr ~= Entry.PrevNameString or NameX ~= Entry.PrevNameLabelX or NameY ~= Entry.PrevNameLabelY then
-                Entry.PrevNameString = NameStr; Entry.PrevNameLabelX = NameX; Entry.PrevNameLabelY = NameY;
+            if NameStr ~= Entry.PrevNameString or NX ~= Entry.PrevNameLabelX or NY ~= Entry.PrevNameLabelY then
+                Entry.PrevNameString = NameStr; Entry.PrevNameLabelX = NX; Entry.PrevNameLabelY = NY;
                 Entry.LabelName.Visible = true;
                 Entry.LabelName.Text = FormatText(NameStr);
-                Entry.LabelName.Position = NewUDim2(0, NameX, 0, NameY);
+                Entry.LabelName.Position = NewUDim2(0, NX, 0, NY);
             end;
+        else
+            Entry.LabelName.Visible = false;
         end;
 
         if WeaponEnabled then
-            local WeaponX = BoxCenterX;
-            local WeaponY = ArmorBarEnabled and (BoxBottom + ArmorBarGap + ArmorBarHeight + 2 + WeaponOffset) or (BoxBottom + WeaponOffset);
-            local WeaponStr = Entry.WeaponString;
-            if WeaponStr ~= Entry.PrevWeaponString or WeaponX ~= Entry.PrevWeaponLabelX or WeaponY ~= Entry.PrevWeaponLabelY then
-                Entry.PrevWeaponString = WeaponStr; Entry.PrevWeaponLabelX = WeaponX; Entry.PrevWeaponLabelY = WeaponY;
-                Entry.LabelWeapon.Visible = (WeaponStr ~= "none") or WeaponShowNone;
-                Entry.LabelWeapon.Text = FormatText(WeaponStr);
-                Entry.LabelWeapon.Position = NewUDim2(0, WeaponX + 1, 0, WeaponY - 6);
+            local WX = BoxCenterX;
+            local WY = ArmorBarEnabled and (BoxBottom + ArmorBarGap + ArmorBarHeight + 2 + WeaponOffset) or (BoxBottom + WeaponOffset);
+            local WStr = Entry.WeaponString;
+            if WStr ~= Entry.PrevWeaponString or WX ~= Entry.PrevWeaponLabelX or WY ~= Entry.PrevWeaponLabelY then
+                Entry.PrevWeaponString = WStr; Entry.PrevWeaponLabelX = WX; Entry.PrevWeaponLabelY = WY;
+                Entry.LabelWeapon.Visible = (WStr ~= "none") or WeaponShowNone;
+                Entry.LabelWeapon.Text = FormatText(WStr);
+                Entry.LabelWeapon.Position = NewUDim2(0, WX + 1, 0, WY - 6);
             end;
+        else
+            Entry.LabelWeapon.Visible = false;
         end;
 
         if DistanceEnabled and HasLocalPlayer then
-            local DistDX, DistDY, DistDZ = RootX - LocalX, RootY - LocalY, RootZ - LocalZ;
-            local DistanceSq = DistDX * DistDX + DistDY * DistDY + DistDZ * DistDZ;
-            local DistLabelX, DistLabelY = BoxCenterX, BoxBottom + DistanceOffset;
+            local DDX, DDY, DDZ = RootX - LocalX, RootY - LocalY, RootZ - LocalZ;
+            local DistSq = DDX * DDX + DDY * DDY + DDZ * DDZ;
+            local DLX, DLY = BoxCenterX, BoxBottom + DistanceOffset;
             local PrevDist = Entry.PrevDistanceValue;
-            local CurrentDist;
-            if PrevDist < 0 or DistanceSq < (PrevDist - 0.5) * (PrevDist - 0.5) or DistanceSq > (PrevDist + 0.5) * (PrevDist + 0.5) then
-                CurrentDist = MathFloor(MathSqrt(DistanceSq));
+            local CurDist;
+            if PrevDist < 0 or DistSq < (PrevDist - 0.5) * (PrevDist - 0.5) or DistSq > (PrevDist + 0.5) * (PrevDist + 0.5) then
+                CurDist = MathFloor(MathSqrt(DistSq));
             else
-                CurrentDist = PrevDist;
+                CurDist = PrevDist;
             end;
-            if CurrentDist ~= Entry.PrevDistanceValue or DistLabelX ~= Entry.PrevDistanceLabelX or DistLabelY ~= Entry.PrevDistanceLabelY then
-                local DistanceString = (CurrentDist ~= Entry.PrevDistanceValue) and (ToString(CurrentDist) .. Settings.Distance.Ending) or Entry.PrevDistanceString;
-                Entry.PrevDistanceValue = CurrentDist; Entry.PrevDistanceString = DistanceString;
-                Entry.PrevDistanceLabelX = DistLabelX; Entry.PrevDistanceLabelY = DistLabelY;
+            if CurDist ~= Entry.PrevDistanceValue or DLX ~= Entry.PrevDistanceLabelX or DLY ~= Entry.PrevDistanceLabelY then
+                local DStr = (CurDist ~= Entry.PrevDistanceValue) and (ToString(CurDist) .. Settings.Distance.Ending) or Entry.PrevDistanceString;
+                Entry.PrevDistanceValue = CurDist; Entry.PrevDistanceString = DStr;
+                Entry.PrevDistanceLabelX = DLX; Entry.PrevDistanceLabelY = DLY;
                 Entry.LabelDistance.Visible = true;
-                Entry.LabelDistance.Text = DistanceString;
-                Entry.LabelDistance.Position = NewUDim2(0, DistLabelX, 0, DistLabelY);
+                Entry.LabelDistance.Text = DStr;
+                Entry.LabelDistance.Position = NewUDim2(0, DLX, 0, DLY);
             end;
+        else
+            Entry.LabelDistance.Visible = false;
         end;
 
         if FlagsEnabled then
-            local FlagsStr = Entry.FlagsString;
-            local FlagsX, FlagsY = Entry.FlagsLabelX, Entry.FlagsLabelY + FlagsOffset;
-            if FlagsStr ~= Entry.PrevFlagsString or FlagsX ~= Entry.PrevFlagsLabelX or FlagsY ~= Entry.PrevFlagsLabelY then
-                Entry.PrevFlagsString = FlagsStr; Entry.PrevFlagsLabelX = FlagsX; Entry.PrevFlagsLabelY = FlagsY;
-                Entry.LabelFlags.Visible = FlagsStr ~= "";
-                Entry.LabelFlags.Text = FormatText(FlagsStr);
-                Entry.LabelFlags.Position = NewUDim2(0, FlagsX + 2, 0, FlagsY - 4);
+            local FStr = Entry.FlagsString;
+            local FX, FY = Entry.FlagsLabelX, Entry.FlagsLabelY + FlagsOffset;
+            if FStr ~= Entry.PrevFlagsString or FX ~= Entry.PrevFlagsLabelX or FY ~= Entry.PrevFlagsLabelY then
+                Entry.PrevFlagsString = FStr; Entry.PrevFlagsLabelX = FX; Entry.PrevFlagsLabelY = FY;
+                Entry.LabelFlags.Visible = FStr ~= "";
+                Entry.LabelFlags.Text = FormatText(FStr);
+                Entry.LabelFlags.Position = NewUDim2(0, FX + 2, 0, FY - 4);
             end;
+        else
+            Entry.LabelFlags.Visible = false;
         end;
     end;
 end);
